@@ -15,5 +15,7 @@
 local.properties
 
 # Project exclude paths
-/app/
+/app/build/
+/app/.cxx/
+/app/.externalNativeBuild/
 /gradle/
