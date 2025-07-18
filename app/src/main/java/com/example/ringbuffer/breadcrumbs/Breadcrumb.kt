@@ -23,9 +23,15 @@ data class Breadcrumb(
         @JvmStatic
         fun toJson(breadcrumbs: List<Breadcrumb>): String {
             return breadcrumbs.joinToString("\n") { breadcrumb ->
-                val extrasJson = breadcrumb.extras.joinToString(",") { "\"$it\"" }
-                """{"timestamp":${breadcrumb.timestamp},"eventType":"${breadcrumb.eventType}","extras":[$extrasJson],"threadName":"${breadcrumb.threadName}"}"""
+                breadcrumb.toJson()
             }
+        }
+
+        @JvmStatic
+        fun Breadcrumb.toJson(): String {
+            val extrasJson = this.extras.joinToString(",") { "\"$it\"" }
+            return """{"timestamp":${this.timestamp},"eventType":"${this.eventType}","extras":[$extrasJson],"threadName":"${this.threadName}"}"""
+
         }
     }
 }

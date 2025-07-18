@@ -32,7 +32,7 @@ class RingBufferFileWriter(
     private var closed = false
 
     init {
-        // Start background flush thread
+        // Start background write thread
         flushThread = Thread({
             while (!closed && !Thread.currentThread().isInterrupted) {
                 try {

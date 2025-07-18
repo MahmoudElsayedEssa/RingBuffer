@@ -38,7 +38,7 @@ class BatchedFileWriter(
     private var closed = false
 
     init {
-        // Background flush thread
+        // Background write thread
         flushThread = Thread({
             while (!closed && !Thread.currentThread().isInterrupted) {
                 try {
