@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import com.example.ringbuffer.breadcrumbs.Breadcrumb
 import com.example.ringbuffer.breadcrumbs.Breadcrumb.Companion.toJson
 import com.example.ringbuffer.breadcrumbs.BreadcrumbGenerators
-import com.example.ringbuffer.breadcrumbs.storage.tapRingBuffer.TapRingBufferBreadcrumbLogger
 import kotlin.system.measureTimeMillis
 
 class Benchmark {
@@ -15,35 +14,37 @@ class Benchmark {
      * Tests a single function with different numbers of events and different event sizes
      * @param action Function that takes a list of breadcrumbs and performs some operation
      */
-    fun testThisFun(action: (List<Breadcrumb>) -> Unit) {
+    fun testThisFun(clearFunction: () -> Unit, action: (List<Breadcrumb>) -> Unit) {
         println("=== Starting Comprehensive Benchmark ===")
+
 
         for (number in numberOfEvents) {
             println("\n--- Testing with $number events ---")
 
             // Test with small events
-            println("Testing Small Events (20-512 bytes):")
+            println("Testing Small Events (512 bytes):")
             val smallEvents = BreadcrumbGenerators.generateSingleSizeList(
                 number,
                 BreadcrumbGenerators.BreadcrumbSize.SMALL_512
             )
-            runBenchmark("Small Events", number, smallEvents, action)
+
+            runBenchmark("Small Events", number, smallEvents, action, clearFunction)
 
             // Test with medium events  
-            println("Testing Medium Events (~512 bytes):")
+            println("Testing Medium Events (1k bytes):")
             val mediumEvents = BreadcrumbGenerators.generateSingleSizeList(
                 number,
                 BreadcrumbGenerators.BreadcrumbSize.MEDIUM_1k
             )
-            runBenchmark("Medium Events", number, mediumEvents, action)
+            runBenchmark("Medium Events", number, mediumEvents, action, clearFunction)
 
             // Test with large events
-            println("Testing Large Events (5-10kb):")
+            println("Testing Large Events (10kb):")
             val largeEvents = BreadcrumbGenerators.generateSingleSizeList(
                 number,
                 BreadcrumbGenerators.BreadcrumbSize.LARGE_10k
             )
-            runBenchmark("Large Events", number, largeEvents, action)
+            runBenchmark("Large Events", number, largeEvents, action, clearFunction)
 
 //            // Test with mixed events
 //            println("Testing Mixed Events:")
@@ -146,9 +147,11 @@ class Benchmark {
         eventType: String,
         numberOfEvents: Int,
         events: List<Breadcrumb>,
-        action: (List<Breadcrumb>) -> Unit
+        action: (List<Breadcrumb>) -> Unit,
+        clearFunction: () -> Unit,
     ) {
         try {
+            clearFunction()
             val startTime = System.currentTimeMillis()
             action(events)
             val endTime = System.currentTimeMillis()

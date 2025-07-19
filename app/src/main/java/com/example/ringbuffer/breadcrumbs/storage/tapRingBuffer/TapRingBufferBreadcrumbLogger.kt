@@ -9,14 +9,13 @@ import java.io.File
 import java.io.IOException
 
 class TapRingBufferBreadcrumbLogger(context: Context, private val maxEntries: Int) {
-    private val queueFile: QueueFile =
+     val queueFile: QueueFile =
         QueueFile.Builder(File(context.filesDir, "breadcrumbs-${System.currentTimeMillis()}.txt"))
             .build()
 
 
     @Throws(IOException::class)
     fun flush(breadcrumbs: List<Breadcrumb>) {
-        queueFile.clear()
         for (breadcrumb in breadcrumbs) {
             write(breadcrumb.toJson()+"\n")
         }

@@ -42,16 +42,20 @@ class MainActivity : ComponentActivity() {
             println("Example 1: Testing single function")
             val tapRingBufferBreadcrumbLogger =
                 TapRingBufferBreadcrumbLogger(context = this, maxEntries = 1000)
-            benchmark.testThisFun { tapRingBufferBreadcrumbLogger.flush(it) }
+            benchmark.testThisFun({ tapRingBufferBreadcrumbLogger.queueFile.clear() }) {
+                tapRingBufferBreadcrumbLogger.flush(
+                    it
+                )
+            }
 
-            // Example 2: Test multiple functions with same data
-            println("\n\nExample 2: Testing multiple functions with same data")
-            val functions: Map<String, (List<Breadcrumb>) -> Unit> = mapOf(
-                "tapRingBufferBreadcrumbLogger" to { breadcrumbs: List<Breadcrumb> ->
-                    tapRingBufferBreadcrumbLogger.flush(breadcrumbs)
-                }
-            )
-            benchmark.testMultipleFunctions(functions)
+//            // Example 2: Test multiple functions with same data
+//            println("\n\nExample 2: Testing multiple functions with same data")
+//            val functions: Map<String, (List<Breadcrumb>) -> Unit> = mapOf(
+//                "tapRingBufferBreadcrumbLogger" to { breadcrumbs: List<Breadcrumb> ->
+//                    tapRingBufferBreadcrumbLogger.flush(breadcrumbs)
+//                }
+//            )
+//            benchmark.testMultipleFunctions(functions)
         }
     }
 
