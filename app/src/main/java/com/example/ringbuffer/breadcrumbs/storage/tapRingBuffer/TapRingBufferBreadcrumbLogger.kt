@@ -18,7 +18,7 @@ class TapRingBufferBreadcrumbLogger(context: Context, private val maxEntries: In
     fun flush(breadcrumbs: List<Breadcrumb>) {
         queueFile.clear()
         for (breadcrumb in breadcrumbs) {
-            write(breadcrumb.toJson())
+            write(breadcrumb.toJson()+"\n")
         }
     }
 
