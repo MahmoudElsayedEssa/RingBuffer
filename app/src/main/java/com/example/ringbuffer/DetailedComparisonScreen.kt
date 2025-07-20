@@ -9,9 +9,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.ringbuffer.breadcrumbs.Breadcrumb
 import com.example.ringbuffer.breadcrumbs.BreadcrumbGenerators
+import com.example.ringbuffer.breadcrumbs.storage.Database.BreadcrumbDatabaseLogger
 import com.example.ringbuffer.breadcrumbs.storage.batchedfiles.BatchesFile
 import com.example.ringbuffer.breadcrumbs.storage.ringfilebuffer.BoundaryDetectionMode
 import com.example.ringbuffer.breadcrumbs.storage.ringfilebuffer.RingBufferConfig
@@ -64,7 +66,8 @@ fun DetailedComparisonScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
@@ -235,10 +238,10 @@ fun DetailedComparisonScreen() {
 
         // Results
         if (testResults.isNotEmpty()) {
-            LazyColumn(
+            Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(testResults) { result ->
+                testResults.forEach { result ->
                     DetailedTestResultCard(result = result)
                 }
             }
@@ -420,7 +423,15 @@ private fun runDetailedTests(
                     maxCapacity
                 ) { count, sizeBytes, maxCap ->
                     testBatchesFileDetailed(context, count, sizeBytes, maxCap, breadcrumbs)
-                }
+                },
+                runDetailedTest(
+                    "DatabaseRingBuffer",
+                    testCounts,
+                    size.value,
+                    maxCapacity
+                ) { count, sizeBytes, maxCap ->
+                    testDatabaseRingBufferDetailed(context, count, sizeBytes, maxCap, breadcrumbs)
+                },
             )
         }
         onResults(results)
@@ -583,6 +594,45 @@ private fun testTapRingBufferDetailed(
         dataSize = dataSize
     )
 }
+
+private fun testDatabaseRingBufferDetailed(
+    context: android.content.Context,
+    count: Int,
+    size: Int,
+    maxCapacity: Int,
+    breadcrumbs: List<Breadcrumb>
+): TestMetrics {
+
+    val jsonLines = breadcrumbs.map { it.toJsonString() }
+    val dataSize = jsonLines.sumOf { it.toByteArray().size.toLong() }
+
+    val writer =
+        BreadcrumbDatabaseLogger(context, maxCapacity)
+
+    writer.clearDatabase()
+    val writeTime = measureTimeMillis {
+        writer.addEntities(jsonLines)
+    }
+
+    val dbFile = context.getDatabasePath("breadcrumbs.db")
+
+
+    val throughput = if (writeTime > 0) (count * 1000L) / writeTime else 0L
+    val fileSize = if (dbFile.exists()) dbFile.length() / 1024 else 0L
+
+    writer.close()
+
+    return TestMetrics(
+        writeTimeMs = writeTime,
+        throughputPerSec = throughput,
+        successRate = 100.0,
+        errorCount = 0,
+        fileSizeKB = fileSize, // QueueFile doesn't expose size easily
+        fileCount = 1,
+        dataSize = dataSize
+    )
+}
+
 
 private fun testRingFileBufferDetailed(
     context: android.content.Context,
