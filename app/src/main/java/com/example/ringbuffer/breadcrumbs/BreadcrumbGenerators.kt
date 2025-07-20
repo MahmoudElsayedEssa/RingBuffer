@@ -10,10 +10,11 @@ object BreadcrumbGenerators {
     private val random = Random.Default
 
     enum class BreadcrumbSize(val value: Int) {
-        SMALL_512(512), 
-        MEDIUM_1K(1000), 
+        SMALL_512(512),
+        MEDIUM_1K(1000),
         LARGE_10K(10000),
-        EXTRA_LARGE_50K(50000)
+        EXTRA_LARGE_50K(50000),
+        MIXED(-1)
     }
 
     // Realistic event types for testing
@@ -95,12 +96,14 @@ object BreadcrumbGenerators {
                     minExtras = 1,
                     maxExtras = 3
                 )
+
                 index == count -> generateBreadcrumb(
                     eventTypes = listOf("user_logout", "app_close"),
                     launchId = launchId,
                     minExtras = 0,
                     maxExtras = 2
                 )
+
                 else -> generateBreadcrumb(launchId = launchId)
             }
         }
@@ -126,10 +129,13 @@ object BreadcrumbGenerators {
      * Generate breadcrumbs of only one size type
      */
     fun generateSingleSizeList(
-        count: Int, 
+        count: Int,
         size: Int,
         launchId: String = generateLaunchId()
     ): List<Breadcrumb> {
+        if (size == BreadcrumbSize.MIXED.value) {
+            return generateRandomizedList(listSize = count)
+        }
         return (1..count).mapIndexed { index, _ ->
             createDummyBreadcrumbWithSize(size, index, launchId)
         }
@@ -153,7 +159,7 @@ object BreadcrumbGenerators {
      * Creates a dummy breadcrumb with exact size in bytes after JSON serialization
      */
     fun createDummyBreadcrumbWithSize(
-        targetSizeBytes: Int, 
+        targetSizeBytes: Int,
         index: Int,
         launchId: String = "test_launch_$index"
     ): Breadcrumb {
@@ -212,7 +218,7 @@ object BreadcrumbGenerators {
             } else {
                 padding.dropLast(-sizeDiff)
             }
-            
+
             Breadcrumb.create(
                 eventType = "test_$index",
                 launchId = launchId,
@@ -253,7 +259,12 @@ object BreadcrumbGenerators {
         return (1..count).map {
             if (random.nextFloat() < 0.3f) {
                 generateBreadcrumb(
-                    eventTypes = listOf("error_occurred", "crash_detected", "network_error", "timeout"),
+                    eventTypes = listOf(
+                        "error_occurred",
+                        "crash_detected",
+                        "network_error",
+                        "timeout"
+                    ),
                     launchId = launchId,
                     minExtras = 3,
                     maxExtras = 10,
@@ -266,16 +277,40 @@ object BreadcrumbGenerators {
         }
     }
 
-    private fun generateNetworkIntensiveBreadcrumbs(count: Int, launchId: String): List<Breadcrumb> {
+    private fun generateNetworkIntensiveBreadcrumbs(
+        count: Int,
+        launchId: String
+    ): List<Breadcrumb> {
         return (1..count).map {
             generateBreadcrumb(
-                eventTypes = listOf("network_request", "api_call", "file_upload", "download_started", "sync_data"),
+                eventTypes = listOf(
+                    "network_request",
+                    "api_call",
+                    "file_upload",
+                    "download_started",
+                    "sync_data"
+                ),
                 threadNames = listOf("network", "background", "upload", "download"),
                 launchId = launchId,
                 minExtras = 1,
                 maxExtras = 6,
                 minStringLength = 15,
                 maxStringLength = 30
+            )
+        }
+    }
+
+
+    fun generateRandomizedList(
+        minSize: Int = BreadcrumbSize.SMALL_512.value,
+        maxSize: Int = BreadcrumbSize.LARGE_10K.value,
+        listSize: Int
+    ): List<Breadcrumb> {
+
+        return (1..listSize).map { index ->
+            createDummyBreadcrumbWithSize(
+                targetSizeBytes = random.nextInt(minSize, maxSize + 1),
+                index = index
             )
         }
     }

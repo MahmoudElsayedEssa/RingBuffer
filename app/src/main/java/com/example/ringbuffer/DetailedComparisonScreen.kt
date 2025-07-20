@@ -1,16 +1,38 @@
 package com.example.ringbuffer
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.ringbuffer.breadcrumbs.Breadcrumb
 import com.example.ringbuffer.breadcrumbs.BreadcrumbGenerators
 import com.example.ringbuffer.breadcrumbs.storage.batchedfiles.BatchesFile
 import com.example.ringbuffer.breadcrumbs.storage.ringfilebuffer.BoundaryDetectionMode
@@ -24,7 +46,6 @@ import java.io.File
 import kotlin.system.measureTimeMillis
 
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailedComparisonScreen() {
@@ -36,6 +57,9 @@ fun DetailedComparisonScreen() {
     var useMultipleTestCounts by remember { mutableStateOf(false) }
     var customTestCounts by remember { mutableStateOf("100,500,1000,2000") }
     var maxBreadcrumbLimit by remember { mutableStateOf("5000") }
+    val breadcrumbs: List<Breadcrumb> =
+        BreadcrumbGenerators.generateSingleSizeList(breadcrumbCount.toInt(), selectedSize.value)
+
 
     Column(
         modifier = Modifier
@@ -73,9 +97,10 @@ fun DetailedComparisonScreen() {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(BreadcrumbGenerators.BreadcrumbSize.entries) { size ->
+
                         FilterChip(
                             onClick = { selectedSize = size },
-                            label = { Text("${size.value}B") },
+                            label = { Text("${if (size == BreadcrumbGenerators.BreadcrumbSize.MIXED) "Mixed " else size.value}B") },
                             selected = selectedSize == size
                         )
                     }
@@ -88,7 +113,7 @@ fun DetailedComparisonScreen() {
                     label = { Text("Max Breadcrumb Capacity") },
                     placeholder = { Text("5000") },
                     modifier = Modifier.fillMaxWidth(),
-                    supportingText = { 
+                    supportingText = {
                         Text("Maximum number of breadcrumbs the writers can hold (ring buffer capacity)")
                     }
                 )
@@ -116,7 +141,7 @@ fun DetailedComparisonScreen() {
                         label = { Text("Test Counts (comma-separated)") },
                         placeholder = { Text("e.g., 100,500,1000,2000") },
                         modifier = Modifier.fillMaxWidth(),
-                        supportingText = { 
+                        supportingText = {
                             Text("Multiple tests will be run and averaged for each writer")
                         }
                     )
@@ -127,7 +152,7 @@ fun DetailedComparisonScreen() {
                         label = { Text("Number of Breadcrumbs") },
                         placeholder = { Text("1000") },
                         modifier = Modifier.fillMaxWidth(),
-                        supportingText = { 
+                        supportingText = {
                             Text("Single test run with specified count")
                         }
                     )
@@ -140,7 +165,7 @@ fun DetailedComparisonScreen() {
                 } else {
                     listOf(breadcrumbCount.toIntOrNull() ?: 1000)
                 }
-                
+
                 val hasOverflow = testCounts.any { it > maxLimit }
                 if (hasOverflow) {
                     Card(
@@ -171,7 +196,14 @@ fun DetailedComparisonScreen() {
                             listOf(breadcrumbCount.toIntOrNull() ?: 1000)
                         }
 
-                        runDetailedTests(context, selectedSize, finalTestCounts, maxLimit) { results ->
+
+                        runDetailedTests(
+                            context,
+                            selectedSize,
+                            finalTestCounts,
+                            maxLimit,
+                            breadcrumbs
+                        ) { results ->
                             testResults = results
                             isRunning = false
                         }
@@ -189,7 +221,8 @@ fun DetailedComparisonScreen() {
                         Text("Testing...")
                     } else {
                         val testCountText = if (useMultipleTestCounts) {
-                            val counts = customTestCounts.split(",").mapNotNull { it.trim().toIntOrNull() }
+                            val counts =
+                                customTestCounts.split(",").mapNotNull { it.trim().toIntOrNull() }
                             "Run Tests (${counts.size} scenarios, max: $maxLimit)"
                         } else {
                             "Run Test (${breadcrumbCount} breadcrumbs, max: $maxLimit)"
@@ -355,19 +388,38 @@ private fun runDetailedTests(
     size: BreadcrumbGenerators.BreadcrumbSize,
     testCounts: List<Int>, // Now accepts custom test counts
     maxCapacity: Int, // Added max capacity parameter
-    onResults: (List<DetailedTestResult>) -> Unit
+    breadcrumbs: List<Breadcrumb>,
+    onResults: (List<DetailedTestResult>) -> Unit,
 ) {
+
     kotlinx.coroutines.CoroutineScope(Dispatchers.Main).launch {
+
+
         val results = withContext(Dispatchers.IO) {
             listOf(
-                runDetailedTest("TapRingBuffer", testCounts, size.value, maxCapacity) { count, sizeBytes, maxCap ->
-                    testTapRingBufferDetailed(context, count, sizeBytes, maxCap)
+                runDetailedTest(
+                    "TapRingBuffer",
+                    testCounts,
+                    size.value,
+                    maxCapacity
+                ) { count, sizeBytes, maxCap ->
+                    testTapRingBufferDetailed(context, count, sizeBytes, maxCap, breadcrumbs)
                 },
-                runDetailedTest("RingFileBuffer", testCounts, size.value, maxCapacity) { count, sizeBytes, maxCap ->
-                    testRingFileBufferDetailed(context, count, sizeBytes, maxCap)
+                runDetailedTest(
+                    "RingFileBuffer",
+                    testCounts,
+                    size.value,
+                    maxCapacity
+                ) { count, sizeBytes, maxCap ->
+                    testRingFileBufferDetailed(context, count, sizeBytes, maxCap, breadcrumbs)
                 },
-                runDetailedTest("BatchesFile", testCounts, size.value, maxCapacity) { count, sizeBytes, maxCap ->
-                    testBatchesFileDetailed(context, count, sizeBytes, maxCap)
+                runDetailedTest(
+                    "BatchesFile",
+                    testCounts,
+                    size.value,
+                    maxCapacity
+                ) { count, sizeBytes, maxCap ->
+                    testBatchesFileDetailed(context, count, sizeBytes, maxCap, breadcrumbs)
                 }
             )
         }
@@ -386,17 +438,23 @@ private fun runDetailedTest(
         val metrics = testCounts.map { count ->
             // Run each test scenario and clean up between tests
             cleanupTestFiles(writerName)
+
             testFunction(count, size, maxCapacity)
         }
 
-        val avgWriteTime = if (metrics.isNotEmpty()) metrics.map { it.writeTimeMs }.average().toLong() else 0L
+        val avgWriteTime =
+            if (metrics.isNotEmpty()) metrics.map { it.writeTimeMs }.average().toLong() else 0L
         val minWriteTime = if (metrics.isNotEmpty()) metrics.minOf { it.writeTimeMs } else 0L
         val maxWriteTime = if (metrics.isNotEmpty()) metrics.maxOf { it.writeTimeMs } else 0L
-        val avgThroughput = if (metrics.isNotEmpty()) metrics.map { it.throughputPerSec }.average().toLong() else 0L
-        val successRate = if (metrics.isNotEmpty()) metrics.map { it.successRate }.average() else 0.0
+        val avgThroughput =
+            if (metrics.isNotEmpty()) metrics.map { it.throughputPerSec }.average().toLong() else 0L
+        val successRate =
+            if (metrics.isNotEmpty()) metrics.map { it.successRate }.average() else 0.0
         val totalErrors = metrics.sumOf { it.errorCount }
-        val avgFileSize = if (metrics.isNotEmpty()) metrics.map { it.fileSizeKB }.average().toLong() else 0L
-        val avgFileCount = if (metrics.isNotEmpty()) metrics.map { it.fileCount }.average().toInt() else 0
+        val avgFileSize =
+            if (metrics.isNotEmpty()) metrics.map { it.fileSizeKB }.average().toLong() else 0L
+        val avgFileCount =
+            if (metrics.isNotEmpty()) metrics.map { it.fileCount }.average().toInt() else 0
         val efficiency = calculateStorageEfficiency(metrics)
 
         val testScenariosText = if (testCounts.size == 1) {
@@ -458,9 +516,11 @@ private fun cleanupTestFiles(writerName: String) {
             "RingFileBuffer" -> {
                 // RingFileBuffer creates files with timestamp, so cleanup would be file-pattern based
             }
+
             "BatchesFile" -> {
                 // BatchesFile creates batch directories that could be cleaned up
             }
+
             "TapRingBuffer" -> {
                 // TapRingBuffer files are managed internally
             }
@@ -486,53 +546,70 @@ data class TestMetrics(
     val dataSize: Long
 )
 
-private fun testTapRingBufferDetailed(context: android.content.Context, count: Int, size: Int, maxCapacity: Int): TestMetrics {
-    val breadcrumbs = BreadcrumbGenerators.generateSingleSizeList(count, size)
+private fun testTapRingBufferDetailed(
+    context: android.content.Context,
+    count: Int,
+    size: Int,
+    maxCapacity: Int,
+    breadcrumbs: List<Breadcrumb>
+): TestMetrics {
+
     val jsonLines = breadcrumbs.map { it.toJsonString() }
     val dataSize = jsonLines.sumOf { it.toByteArray().size.toLong() }
-    
-    val writer = TapRingBufferBreadcrumbLogger(context, maxCapacity) // Use provided max capacity
-    
+    val file = File(
+        context.filesDir,
+        "Tap-breadcrumbs-${System.currentTimeMillis()}.txt"
+    )
+    val writer =
+        TapRingBufferBreadcrumbLogger(context, file, maxCapacity) // Use provided max capacity
+
+    writer.queueFile.clear()
     val writeTime = measureTimeMillis {
         writer.addEntities(jsonLines)
     }
-    
+
     val throughput = if (writeTime > 0) (count * 1000L) / writeTime else 0L
-    
+    val fileSize = if (file.exists()) file.length() / 1024 else 0L
+
     writer.close()
-    
+
     return TestMetrics(
         writeTimeMs = writeTime,
         throughputPerSec = throughput,
         successRate = 100.0,
         errorCount = 0,
-        fileSizeKB = 0, // QueueFile doesn't expose size easily
+        fileSizeKB = fileSize, // QueueFile doesn't expose size easily
         fileCount = 1,
         dataSize = dataSize
     )
 }
 
-private fun testRingFileBufferDetailed(context: android.content.Context, count: Int, size: Int, maxCapacity: Int): TestMetrics {
-    val breadcrumbs = BreadcrumbGenerators.generateSingleSizeList(count, size)
+private fun testRingFileBufferDetailed(
+    context: android.content.Context,
+    count: Int,
+    size: Int,
+    maxCapacity: Int,
+    breadcrumbs: List<Breadcrumb>
+): TestMetrics {
     val jsonLines = breadcrumbs.map { it.toJsonString() }
     val dataSize = jsonLines.sumOf { it.toByteArray().size.toLong() }
-    
+
     val file = File(context.filesDir, "ringbuffer_detailed_${System.currentTimeMillis()}.txt")
     val config = RingBufferConfig(
         maxEntities = maxCapacity, // Use provided max capacity
         boundaryDetectionMode = BoundaryDetectionMode.SCANNING
     )
     val writer = RingFileBuffer(file.absolutePath, config)
-    
+
     val writeTime = measureTimeMillis {
         writer.addEntities(jsonLines)
     }
-    
+
     val throughput = if (writeTime > 0) (count * 1000L) / writeTime else 0L
     val fileSize = if (file.exists()) file.length() / 1024 else 0L
-    
+
     writer.close()
-    
+
     return TestMetrics(
         writeTimeMs = writeTime,
         throughputPerSec = throughput,
@@ -544,29 +621,35 @@ private fun testRingFileBufferDetailed(context: android.content.Context, count: 
     )
 }
 
-private fun testBatchesFileDetailed(context: android.content.Context, count: Int, size: Int, maxCapacity: Int): TestMetrics {
-    val breadcrumbs = BreadcrumbGenerators.generateSingleSizeList(count, size)
+private fun testBatchesFileDetailed(
+    context: android.content.Context,
+    count: Int,
+    size: Int,
+    maxCapacity: Int,
+    breadcrumbs: List<Breadcrumb>
+): TestMetrics {
+//    val breadcrumbs = BreadcrumbGenerators.generateSingleSizeList(count, size)
     val jsonLines = breadcrumbs.map { it.toJsonString() }
     val dataSize = jsonLines.sumOf { it.toByteArray().size.toLong() }
-    
+
     // Note: BatchesFile doesn't have a hard capacity limit like ring buffers
     // It manages capacity through file rotation, so maxCapacity is informational
     val writer = BatchesFile(context)
-    
+
     val writeTime = measureTimeMillis {
         writer.addEntities(jsonLines)
         writer.flushToDisk()
     }
-    
+
     val throughput = if (writeTime > 0) (count * 1000L) / writeTime else 0L
-    
+
     // Calculate batch file metrics
     val batchDir = File(context.filesDir, "batches")
     val batchFiles = batchDir.listFiles() ?: emptyArray()
     val totalSize = batchFiles.sumOf { it.length() } / 1024
-    
+
     writer.close()
-    
+
     return TestMetrics(
         writeTimeMs = writeTime,
         throughputPerSec = throughput,

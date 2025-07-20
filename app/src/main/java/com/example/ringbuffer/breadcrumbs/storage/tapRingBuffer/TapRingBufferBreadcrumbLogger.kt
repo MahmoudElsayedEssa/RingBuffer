@@ -11,28 +11,27 @@ import java.io.IOException
 
 class TapRingBufferBreadcrumbLogger(
     context: Context,
+    val file: File,
     private val maxEntries: Int
 ) : IFileWriter {
 
-    private val queueFile: QueueFile
+    val queueFile: QueueFile
     private var currentOffset = 0L
 
     init {
-        val file = File(
-            context.filesDir,
-            "breadcrumbs-${System.currentTimeMillis()}.txt"
-        )
+
         queueFile = QueueFile.Builder(file).build()
     }
 
     // IFileWriter implementation
     override fun addEntity(jsonLine: String): Boolean {
         return try {
-            write(jsonLine)
+            write(jsonLine + "\n")
             true
         } catch (e: IOException) {
             false
         }
+
     }
 
     override fun addEntities(jsonLines: List<String>): List<EntityBoundary> {
@@ -70,7 +69,7 @@ class TapRingBufferBreadcrumbLogger(
     // Core ring buffer write functionality
     @Throws(IOException::class)
     private fun write(breadCrumb: String) {
-        if (queueFile.size() >= maxEntries) {
+        if (queueFile.size() > maxEntries) {
             queueFile.remove() // overwrite oldest
         }
         queueFile.add(breadCrumb.toByteArray())
