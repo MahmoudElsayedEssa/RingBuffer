@@ -125,13 +125,13 @@ class BreadcrumbManager(
             val breadcrumbsToFlush = buffer.toList()
             buffer.clear()
 
-            val success = storageManager.writeBreadcrumbs(breadcrumbsToFlush)
-            if (!success) {
                 Log.e(TAG, "Failed to flush ${breadcrumbsToFlush.size} breadcrumbs")
                 // Re-add failed breadcrumbs to buffer
                 buffer.addAll(0, breadcrumbsToFlush)
-            }
-            success
+//            val success = storageManager.writeBreadcrumbs(breadcrumbsToFlush)
+//            if (!success) {
+//            }
+//            success
         }
     }
 }

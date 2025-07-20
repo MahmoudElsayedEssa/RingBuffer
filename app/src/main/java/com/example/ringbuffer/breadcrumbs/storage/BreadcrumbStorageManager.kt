@@ -23,11 +23,11 @@ class BreadcrumbStorageManager(
         private const val BREADCRUMBS_DIR = "breadcrumbs"
     }
 
-    fun writeBreadcrumbs(breadcrumbs: List<Breadcrumb>): Boolean {
-        return try {
+    fun writeBreadcrumbs(breadcrumbs: List<Breadcrumb>) {
+         try {
             val jsonLines = breadcrumbs.toJsonStringList()
             val boundaries = fileWriter.addEntities(jsonLines)
-            boundaries.isNotEmpty()
+
         } catch (e: Exception) {
             Log.e(TAG, "Error writing breadcrumbs", e)
             false

@@ -8,8 +8,10 @@ import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException
-import java.util.*
-import kotlin.collections.ArrayList
+import java.util.LinkedList
+import java.util.Queue
+import java.util.Timer
+import java.util.TimerTask
 
 class BatchesFile(
     private val context: Context
@@ -38,6 +40,7 @@ class BatchesFile(
     private var lastLogTime = System.currentTimeMillis()
     private var flushTimer: Timer? = null
     private var flushTask: TimerTask? = null
+
     @Volatile
     private var isClosing = false
 
@@ -47,12 +50,12 @@ class BatchesFile(
     }
 
     // Main IFileWriter implementation
-    override fun addEntity(jsonLine: String): Boolean {
-        return addEntities(listOf(jsonLine)).isNotEmpty()
+    override fun addEntity(jsonLine: String) {
+        addEntities(listOf(jsonLine))
     }
 
-    override fun addEntities(jsonLines: List<String>): List<EntityBoundary> {
-        if (isClosing) return emptyList()
+    override fun addEntities(jsonLines: List<String>) {
+        if (isClosing) return
 
         val addedEntities = mutableListOf<EntityBoundary>()
 
@@ -68,7 +71,6 @@ class BatchesFile(
             handleBufferFlush()
         }
 
-        return addedEntities
     }
 
     // Private helper methods

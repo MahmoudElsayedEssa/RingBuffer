@@ -24,8 +24,8 @@ class TapRingBufferBreadcrumbLogger(
     }
 
     // IFileWriter implementation
-    override fun addEntity(jsonLine: String): Boolean {
-        return try {
+    override fun addEntity(jsonLine: String) {
+        try {
             write(jsonLine + "\n")
             true
         } catch (e: IOException) {
@@ -34,7 +34,7 @@ class TapRingBufferBreadcrumbLogger(
 
     }
 
-    override fun addEntities(jsonLines: List<String>): List<EntityBoundary> {
+    override fun addEntities(jsonLines: List<String>) {
         val boundaries = mutableListOf<EntityBoundary>()
 
         for (jsonLine in jsonLines) {
@@ -42,13 +42,14 @@ class TapRingBufferBreadcrumbLogger(
             val entitySize = jsonLine.toByteArray().size
             val endOffset = startOffset + entitySize
 
-            if (addEntity(jsonLine)) {
-                boundaries.add(EntityBoundary(startOffset, endOffset, entitySize, false))
-                currentOffset = endOffset
-            }
+
+            addEntity(jsonLine)
+            boundaries.add(EntityBoundary(startOffset, endOffset, entitySize, false))
+            currentOffset = endOffset
+
         }
 
-        return boundaries
+
     }
 
     override fun close() {
