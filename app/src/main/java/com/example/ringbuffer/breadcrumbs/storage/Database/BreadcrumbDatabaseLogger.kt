@@ -3,7 +3,7 @@ package com.example.ringbuffer.breadcrumbs.storage.Database
 import android.content.Context
 import com.example.ringbuffer.breadcrumbs.storage.IFileWriter
 
-class BreadcrumbDatabaseLogger(context: Context, val maxEntities: Int) : IFileWriter {
+class BreadcrumbDatabaseLogger(context: Context,  maxEntities: Int) : IFileWriter {
     private val repository = BreadcrumbRepository(context, maxEntities)
     private var isClosed = false
 
@@ -20,14 +20,7 @@ class BreadcrumbDatabaseLogger(context: Context, val maxEntities: Int) : IFileWr
     fun clearDatabase() {
         repository.clearDatabase()
     }
-    
-    fun testRingBuffer(): String {
-        return repository.testRingBuffer()
-    }
-    
-    fun debugBreadcrumbs(): String {
-        return repository.debugBreadcrumbs()
-    }
+
 
     override fun close() {
         if (!isClosed) {

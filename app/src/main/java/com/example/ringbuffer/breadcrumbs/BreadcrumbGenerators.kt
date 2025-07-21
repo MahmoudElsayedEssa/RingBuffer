@@ -167,6 +167,7 @@ object BreadcrumbGenerators {
         val baseBreadcrumb = Breadcrumb.create(
             eventType = "test_$index",
             launchId = launchId,
+
             extras = emptyList(),
             threadName = "test_thread"
         )
