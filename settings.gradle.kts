@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "RingBuffer"
 include(":app")
- 
+include(":app:benchmark")

@@ -130,9 +130,10 @@ class BreadcrumbRepository(context: Context, private var maxEntities: Int) {
 //    }
 
     private fun trim() {
-        val idsToDelete = getDeleteIds() ?: return
+//        val idsToDelete = getDeleteIds() ?: return
+        val old = oldestBreadcrumbId?: return
+        deleteIdsRanges2(old, old+ (entriesCount - maxEntities - 1))
         oldestBreadcrumbId = null
-        deleteIdsRanges(idsToDelete)
     }
 
 
@@ -195,6 +196,22 @@ class BreadcrumbRepository(context: Context, private var maxEntities: Int) {
         entriesCount -= idsToDelete.size
     }
 
+    private fun deleteIdsRanges2(start: Long, end: Long) {
+
+
+        try {
+            deleteRangeStatement?.clearBindings()
+            deleteRangeStatement?.bindLong(1, start)
+            deleteRangeStatement?.bindLong(2, end)
+            deleteRangeStatement?.executeUpdateDelete()
+            deleteRangeStatement?.clearBindings()
+
+
+        } finally {
+        }
+
+        entriesCount -= (end - start + 1).toInt()
+    }
 
     fun clearDatabase() {
         db.delete("breadcrumbs", null, null)

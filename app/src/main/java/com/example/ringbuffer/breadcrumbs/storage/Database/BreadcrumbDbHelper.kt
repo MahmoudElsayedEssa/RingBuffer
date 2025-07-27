@@ -27,12 +27,12 @@ class BreadcrumbDbHelper(context: Context) : SQLiteOpenHelper(context, "breadcru
             )
         """
         )
-        db?.execSQL(
-            """
-            CREATE INDEX IF NOT EXISTS idx_breadcrumbs_session_time
-                ON breadcrumbs(session_id, timestamp)
-        """
-        )
+//        db?.execSQL(
+//            """
+//            CREATE INDEX IF NOT EXISTS idx_breadcrumbs_session_time
+//                ON breadcrumbs(session_id, timestamp)
+//        """
+//        )
 
     }
 
